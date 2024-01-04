@@ -3,8 +3,8 @@
 import os
 from flask import Flask, request
 
-from db.connect import connect_to_db
 import controllers.user
+from db.connect import connect_to_db
 
 
 app = Flask(__name__)
@@ -14,6 +14,12 @@ db = connect_to_db(os.environ["APP_ENV"])
 @app.route("/")
 def hello_world():
     return "<p>Hello, world!</p>"
+
+@app.route("/api/users/<email>", methods=["GET"])
+def get_user(email):
+    """Get a user by the specified email address."""
+
+    return controllers.user.get_user(email)
 
 @app.route("/api/register", methods=["POST"])
 def register():
