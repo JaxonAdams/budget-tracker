@@ -1,31 +1,43 @@
 """Provide API routes for interacting with User documents."""
 
 import bcrypt
+import flask
+
 import models.User as user_model
 
 
-def get_user(email):
+def find_user_by_email(email):
     """Get a user by the provided email address."""
 
     hits = user_model.User.objects(email=email)
     if len(hits) == 0:
         return {
-            "Error": "User not found."
+            "error": "User not found.",
         }, 404
 
     if len(hits) > 1:
         return {
-            "Error": "Multiple users found. (not sure how we got here...)",
-            "Users": [{
+            "error": "Multiple users found. (not sure how we got here...)",
+            "users": [{
                         "name": f"{hit['first_name']} {hit['last_name']}",
                         "email": hit["email"],
-                      } for hit in hits]
+                      } for hit in hits],
         }, 500
     
-    # get all values except password
-    user = hits[0].except_pw()
+    # return all values for user
+    return hits[0]
 
-    return { "User": user }, 200
+
+def get_user(email):
+    """Search for a user by email and return all data except for 
+    their password.
+    """
+    
+    # get all values
+    user = find_user_by_email(email)
+
+    # return all except password
+    return { "User": user.except_pw() }, 200
 
 
 def register_user(data):
@@ -40,7 +52,7 @@ def register_user(data):
 
     if existing is not None:
         return {
-            "error": f"User with email {data['email']} already exists."
+            "error": f"User with email {data['email']} already exists.",
         }
 
     # hash password
@@ -59,4 +71,46 @@ def register_user(data):
         "email": data["email"],
         "password": hashed,
         "success": True
+    }, 200
+
+
+def login_user(data):
+    """Log a user in by checking their email and password."""
+
+    # user may already be logged in
+    if "email" in flask.session:
+        return {
+            "logged_in": True,
+            "email": flask.session["email"],
+        }, 200
+
+    usr_pw = data["password"].encode("UTF-8")
+    user = find_user_by_email(data["email"])
+    
+    # error included in find_user_by_email if user not found
+    if "error" in user:
+        return user
+    
+    hashed_pw = user["password"].encode("UTF-8")
+    if hashed_pw == bcrypt.hashpw(usr_pw, hashed_pw):
+        flask.session["email"] = user["email"]
+        if "redirect" in data:
+            return flask.redirect(data["redirect"])
+        return {
+            "logged_in": True,
+            "email": flask.session["email"],
+        }, 200
+    
+    # incorrect password
+    return {
+        "error": "Incorrect password."
+    }
+
+
+def logout_user():
+    """Log the current user out by deleting their session info."""
+
+    flask.session.pop("email", None)
+    return {
+        "logged_in": False,
     }, 200
