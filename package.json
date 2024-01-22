@@ -1,0 +1,14 @@
+{
+  "name": "budget-tracker",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"cd server && flask run\" \"cd client && vite\"",
+    "build": "cd client && tsc && vite build",
+    "preview": "cd client && vite preview"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
